@@ -1,0 +1,197 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}AI Traffic Hub - Chào mừng{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section { background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%); padding: 80px 0; border-radius: 0 0 50px 50px; margin-bottom: 60px; }
+    .model-card { border-radius: 24px; border: 1px solid #eee; padding: 2rem; background: #fff; height: 100%; transition: 0.3s; }
+    .model-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+    .icon-box { width: 60px; height: 60px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; }
+    .upload-zone { border: 2px dashed var(--primary-blue); border-radius: 30px; padding: 4rem; background: #fff; cursor: pointer; transition: 0.3s; }
+    .upload-zone:hover { background: #f0f7ff; }
+</style>
+{% endblock %}
+
+{% block content %}
+</div><!-- Dong container mac dinh de hero tran man hinh -->
+
+<div class="hero-section text-center">
+    <div class="container">
+        <span class="badge bg-primary-ai text-white mb-3 px-3 py-2 rounded-pill uppercase">Powered by YOLOv11</span>
+        <h1 class="display-3 fw-bold text-dark mb-4">THE <span class="text-primary">NEURAL</span> PULSE</h1>
+        <p class="lead text-muted mx-auto mb-5" style="max-width: 700px;">Nền tảng phân tích giao thông thông minh hàng đầu. Tích hợp đa mô hình để giám sát mật độ và theo dõi lộ trình phương tiện theo thời gian thực.</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'camera_list' %}" class="btn btn-primary-ai btn-lg px-5 shadow">KHÁM PHÁ CAMERA</a>
+            <button class="btn btn-outline-secondary btn-lg px-5 rounded-pill" onclick="document.getElementById('ai-showcase').scrollIntoView({behavior:'smooth'})">TÌM HIỂU MÔ HÌNH</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- AI SHOWCASE -->
+    <div id="ai-showcase" class="py-5 mb-5">
+        <h2 class="text-center fw-bold mb-5">CÔNG NGHỆ ĐA TẦNG</h2>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="model-card">
+                    <div class="icon-box bg-primary bg-opacity-10 text-primary"><span class="material-icons">bolt</span></div>
+                    <h5 class="fw-bold">FAST (ByteTrack)</h5>
+                    <p class="text-muted small">Ưu tiên tốc độ xử lý cực cao và nhẹ RAM. Phù hợp cho việc giám sát số lượng lớn camera đô thị.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="model-card border-success border-opacity-25">
+                    <div class="icon-box bg-success bg-opacity-10 text-success"><span class="material-icons">shield</span></div>
+                    <h5 class="fw-bold">STABLE (DeepSort)</h5>
+                    <p class="text-muted small">Tích hợp đặc trưng diện mạo (Appearance). Giúp duy trì ID xe bền bỉ ngay cả khi bị xe lớn che khuất.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="model-card border-warning border-opacity-25">
+                    <div class="icon-box bg-warning bg-opacity-10 text-warning"><span class="material-icons">gps_fixed</span></div>
+                    <h5 class="fw-bold">MOTION (OC-SORT)</h5>
+                    <p class="text-muted small">Khắc phục sai số do camera rung lắc hoặc xe quay đầu lắt léo. Tập trung vào quán tính chuyển động.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="model-card border-danger border-opacity-25">
+                    <div class="icon-box bg-danger bg-opacity-10 text-danger"><span class="material-icons">layers</span></div>
+                    <h5 class="fw-bold">MASK (Mask R-CNN)</h5>
+                    <p class="text-muted small">Phân đoạn chính xác từng pixel của xe. Cho phép tính toán diện tích chiếm dụng lòng đường thực tế 99%.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEMO SECTION -->
+    <div class="py-5 border-top">
+        <ul class="nav nav-tabs justify-content-center border-0 mb-5" id="demoTabs">
+            <li class="nav-item"><button class="nav-link active fs-5" data-bs-toggle="tab" data-bs-target="#video-panel">PHÂN TÍCH VIDEO</button></li>
+            <li class="nav-item"><button class="nav-link fs-5" data-bs-toggle="tab" data-bs-target="#image-panel">PHÂN TÍCH ẢNH</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="video-panel">
+                <div class="card p-4 p-lg-5 mx-auto border-0 shadow-lg" style="max-width: 850px; border-radius: 40px;">
+                    <form id="videoForm">
+                        <div class="upload-zone text-center" onclick="document.getElementById('videoFile').click()">
+                            <span class="material-icons display-1 text-primary mb-3">cloud_upload</span>
+                            <h4 id="videoFileName" class="text-dark fw-bold">Kéo thả Video vào đây</h4>
+                            <p class="text-muted">Hỗ trợ .mp4, .avi (Max 50MB)</p>
+                            <input type="file" id="videoFile" class="d-none" accept="video/*">
+                        </div>
+                        <div id="videoPreviewBox" class="preview-box d-none rounded-4 overflow-hidden mt-4"><video id="videoPreview" class="w-100" controls></video></div>
+                        <div class="row g-3 my-4">
+                            <div class="col-6 col-md-3"><input type="radio" class="btn-check" name="mode" id="fast" value="fast" checked><label class="btn btn-outline-primary-ai w-100 py-3" for="fast">FAST</label></div>
+                            <div class="col-6 col-md-3"><input type="radio" class="btn-check" name="mode" id="stable" value="stable"><label class="btn btn-outline-primary-ai w-100 py-3" for="stable">STABLE</label></div>
+                            <div class="col-6 col-md-3"><input type="radio" class="btn-check" name="mode" id="motion" value="motion"><label class="btn btn-outline-primary-ai w-100 py-3" for="motion">MOTION</label></div>
+                            <div class="col-6 col-md-3"><input type="radio" class="btn-check" name="mode" id="mask" value="mask"><label class="btn btn-outline-primary-ai w-100 py-3" for="mask">MASK</label></div>
+                        </div>
+                        <div id="videoProgress" class="d-none mb-4">
+                            <div class="d-flex justify-content-between mb-2"><span class="small fw-bold text-primary" id="vStatus">AI Processing...</span><span id="vPercent" class="small fw-bold text-muted">0%</span></div>
+                            <div class="progress" style="height:10px;"><div id="vBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" style="width:0%"></div></div>
+                        </div>
+                        <button type="button" id="vBtn" onclick="uploadVideo()" class="btn btn-primary-ai btn-lg w-100 py-3 rounded-pill fw-bold shadow">BẮT ĐẦU PHÂN TÍCH</button>
+                    </form>
+                </div>
+            </div>
+            <!-- ... (Giu nguyen panel anh) ... -->
+            <div class="tab-pane fade" id="image-panel">
+                <div class="card p-4 p-lg-5 mx-auto border-0 shadow-lg" style="max-width: 850px; border-radius: 40px;">
+                    <form id="imageForm">
+                        <div class="upload-zone text-center" onclick="document.getElementById('imageFile').click()">
+                            <span class="material-icons display-1 text-success mb-3">image</span>
+                            <h4 id="imageFileName" class="text-dark fw-bold">Kéo thả Ảnh vào đây</h4>
+                            <input type="file" id="imageFile" class="d-none" accept="image/*">
+                        </div>
+                        <div id="imagePreviewBox" class="preview-box d-none rounded-4 overflow-hidden mt-4"><img id="imagePreview" class="w-100"></div>
+                        <div id="imageResult" class="mt-4 d-none p-4 bg-light rounded-4 text-center">
+                            <h5 class="fw-bold text-primary mb-3">Kết quả AI</h5>
+                            <div class="row">
+                                <div class="col-6"><p class="text-muted small mb-0">Số lượng xe</p><h2 id="rCount" class="fw-bold text-dark">0</h2></div>
+                                <div class="col-6"><p class="text-muted small mb-0">Mật độ</p><h2 id="rDensity" class="fw-bold text-dark">0%</h2></div>
+                            </div>
+                        </div>
+                        <button type="button" id="iBtn" onclick="uploadImage()" class="btn btn-success btn-lg w-100 py-3 rounded-pill fw-bold shadow mt-4">PHÂN TÍCH ẢNH</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Copy lai script cu da chay tot tu index.html
+    document.getElementById('videoFile').onchange = function() {
+        const file = this.files[0];
+        if (file) {
+            document.getElementById('videoFileName').innerText = file.name;
+            document.getElementById('videoPreview').src = URL.createObjectURL(file);
+            document.getElementById('videoPreviewBox').classList.remove('d-none');
+        }
+    };
+
+    function uploadVideo() {
+        const file = document.getElementById('videoFile').files[0];
+        if (!file) { alert("Chưa chọn video!"); return; }
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const btn = document.getElementById('vBtn');
+        const progress = document.getElementById('videoProgress');
+        const bar = document.getElementById('vBar');
+        const percent = document.getElementById('vPercent');
+        
+        btn.disabled = true; progress.classList.remove('d-none');
+        const formData = new FormData(); formData.append('video', file); formData.append('mode', mode);
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '{% url "demo_upload" %}', true);
+        xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+        
+        xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const p = Math.round((e.loaded/e.total)*100);
+                bar.style.width = p + '%'; percent.innerText = p + '%';
+            }
+        };
+        xhr.onload = () => {
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                document.getElementById('vStatus').innerText = "Đang xử lý AI...";
+                const timer = setInterval(() => {
+                    fetch(`/demo/progress/${res.id}/`).then(r => r.json()).then(d => {
+                        bar.style.width = d.progress + '%'; percent.innerText = d.progress + '%';
+                        if (d.progress >= 100) { clearInterval(timer); window.location.href = "/demo/result/"+res.id+"/"; }
+                    });
+                }, 1000);
+            } else { alert("Lỗi xử lý!"); btn.disabled = false; }
+        };
+        xhr.send(formData);
+    }
+
+    document.getElementById('imageFile').onchange = function() {
+        const file = this.files[0];
+        if (file) {
+            document.getElementById('imageFileName').innerText = file.name;
+            document.getElementById('imagePreview').src = URL.createObjectURL(file);
+            document.getElementById('imagePreviewBox').classList.remove('d-none');
+        }
+    };
+
+    function uploadImage() {
+        const file = document.getElementById('imageFile').files[0];
+        if (!file) { alert("Chưa chọn ảnh!"); return; }
+        const btn = document.getElementById('iBtn');
+        btn.disabled = true; btn.innerText = "Đang phân tích...";
+        const formData = new FormData(); formData.append('image', file);
+        fetch('/api/cameras/upload_image/', { method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}, body: formData })
+        .then(r => r.json()).then(data => {
+            document.getElementById('imageResult').classList.remove('d-none');
+            document.getElementById('rCount').innerText = data.vehicle_count;
+            document.getElementById('rDensity').innerText = data.density + '%';
+            btn.disabled = false; btn.innerText = "PHÂN TÍCH ẢNH";
+        }).catch(err => { alert("Lỗi!"); btn.disabled = false; });
+    }
+</script>
+{% endblock %}

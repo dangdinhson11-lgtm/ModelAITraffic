@@ -1,0 +1,145 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}Bản đồ trực tiếp - AI Traffic Hub{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .map-wrapper { position: relative; height: calc(100vh - 180px); }
+    #map { height: 100%; border-radius: 30px; border: 1px solid #eee; z-index: 1; box-shadow: var(--card-shadow); }
+    .hotspot-panel {
+        position: absolute; top: 25px; left: 25px; width: 340px;
+        background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(15px);
+        border-radius: 24px; z-index: 1000; box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        padding: 1.5rem; max-height: 85%; overflow-y: auto; border: 1px solid #fff;
+    }
+    .hotspot-item {
+        padding: 15px; border-radius: 16px; transition: 0.3s; cursor: pointer;
+        margin-bottom: 12px; background: #fff; border: 1px solid #f0f0f0;
+    }
+    .hotspot-item:hover { transform: translateX(8px); border-color: var(--primary-blue); background: #f8faff; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    .dot-red { background-color: #dc3545; box-shadow: 0 0 8px #dc3545; }
+    .dot-yellow { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    
+    /* Popup styling */
+    .leaflet-popup-content-wrapper { border-radius: 20px; padding: 5px; }
+    .leaflet-popup-tip { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="map-wrapper">
+    <!-- PANEL ĐIỂM NÓNG -->
+    <div class="hotspot-panel d-none d-lg-block">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0 text-dark">Điểm nóng (Hotspots)</h5>
+            <span class="badge bg-primary-ai text-white rounded-pill px-2">Top 5</span>
+        </div>
+        
+        {% for spot in hotspots %}
+        <div class="hotspot-item shadow-sm" onclick="focusCamera({{ spot.latitude }}, {{ spot.longitude }}, {{ spot.id }})">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold small text-dark">{{ spot.title }}</span>
+                <span class="status-dot {% if spot.current_density > 70 %}dot-red{% else %}dot-yellow{% endif %}"></span>
+            </div>
+            <div class="d-flex justify-content-between align-items-end">
+                <p class="text-muted mb-0" style="font-size: 11px;">{{ spot.current_traffic_level }}</p>
+                <span class="fw-bold text-primary" style="font-size: 14px;">{{ spot.current_density }}%</span>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="mt-4 p-3 bg-light rounded-4">
+            <p class="x-small text-muted mb-0 leading-sm">Hệ thống tự động cập nhật dữ liệu heatmap mỗi 60 giây từ các camera AI.</p>
+        </div>
+    </div>
+
+    <div id="map"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script>
+    // Style ban do Light sang cho dong bo
+    const map = L.map('map').setView([10.7769, 106.7009], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    const cameraMarkers = {};
+    const heatPoints = [];
+
+    const cameraData = [
+        {% for cam in cameras %}
+        {
+            id: {{ cam.id }},
+            title: "{{ cam.title }}",
+            lat: {{ cam.latitude }},
+            lng: {{ cam.longitude }},
+            density: {{ cam.current_density }},
+            image: "{% if cam.last_image %}{{ cam.last_image.url }}{% endif %}"
+        },
+        {% endfor %}
+    ];
+
+    cameraData.forEach(cam => {
+        let color = "#198754";
+        if (cam.density > 70) color = "#dc3545";
+        else if (cam.density > 35) color = "#f59e0b";
+
+        const marker = L.circleMarker([cam.lat, cam.lng], {
+            radius: 8, fillColor: color, color: "#fff", weight: 2, opacity: 1, fillOpacity: 0.8
+        }).addTo(map);
+
+        marker.bindPopup(`
+            <div style="width: 220px; padding: 5px;">
+                <h6 class="fw-bold text-dark mb-2">${cam.title}</h6>
+                ${cam.image ? `<img src="${cam.image}" class="w-100 rounded-3 mb-2 shadow-sm" style="height: 110px; object-fit: cover">` : ''}
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted small">Mật độ hiện tại:</span>
+                    <span class="fw-bold" style="color: ${color}">${cam.density}%</span>
+                </div>
+                <hr class="my-2">
+                <a href="/camera/${cam.id}/" class="btn btn-primary-ai btn-sm w-100 rounded-pill py-2 fw-bold" style="font-size: 11px;">CHI TIẾT PHÂN TÍCH</a>
+            </div>
+        `, { className: 'custom-popup' });
+        
+        cameraMarkers[cam.id] = marker;
+        heatPoints.push([cam.lat, cam.lng, cam.density / 50]);
+    });
+
+    L.heatLayer(heatPoints, {radius: 25, blur: 15, gradient: {0.2: 'green', 0.5: 'yellow', 1.0: 'red'}}).addTo(map);
+
+    function focusCamera(lat, lng, id) {
+        map.setView([lat, lng], 16);
+        cameraMarkers[id].openPopup();
+    }
+
+    // --- SMART REFRESH FOR MAP ---
+    function refreshMap() {
+        console.log("Đang làm mới dữ liệu bản đồ...");
+        fetch('/api/cameras/')
+            .then(res => res.json())
+            .then(data => {
+                const newHeatPoints = [];
+                data.results.forEach(cam => {
+                    const marker = cameraMarkers[cam.id];
+                    if (marker) {
+                        let color = "#198754";
+                        if (cam.current_density > 70) color = "#dc3545";
+                        else if (cam.current_density > 35) color = "#f59e0b";
+                        
+                        marker.setStyle({ fillColor: color });
+                        // Cap nhat popup (neu muon nhung popup dang mo se bi reset, o day chi cap nhat style)
+                    }
+                    newHeatPoints.push([cam.latitude, cam.longitude, cam.current_density / 50]);
+                });
+                heat.setLatLngs(newHeatPoints);
+            });
+    }
+    setInterval(refreshMap, 30000);
+</script>
+{% endblock %}

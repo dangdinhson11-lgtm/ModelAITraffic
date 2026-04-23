@@ -1,0 +1,77 @@
+==========================================================================
+             BÁO CÁO DỰ ÁN: PHÂN TÍCH GIAO THÔNG THÔNG MINH (Model_AITRAFFIC)
+==========================================================================
+
+1. TỔNG QUAN DỰ ÁN
+------------------
+Dự án được thiết kế để tự động hóa việc giám sát giao thông qua camera. Hệ thống thực hiện nhận diện, theo dõi (tracking) và phân tích lưu lượng phương tiện theo thời gian thực hoặc qua video ghi sẵn.
+
+Mục tiêu chính:
+- Nhận diện chính xác các loại phương tiện (Xe máy, Ô tô, Xe tải, Xe khách...).
+- Theo dõi lộ trình di chuyển của từng phương tiện để tránh đếm lặp.
+- Tính toán mật độ giao thông dựa trên hệ số quy đổi chuẩn (PCE).
+- Xuất báo cáo dữ liệu và biểu đồ trực quan.
+
+2. KIẾN TRÚC CÔNG NGHỆ (TECH STACK)
+-----------------------------------
+- Ngôn ngữ: Python 3.12
+- Nhận diện đối tượng (Detection): YOLO (qua Roboflow Inference HTTP SDK).
+- Theo dõi đối tượng (Tracking): ByteTrack (Thuật toán Kalman Filter nâng cao).
+- Xử lý thị giác máy tính: Supervision (Roboflow) và OpenCV.
+- Phân tích dữ liệu: Pandas (CSV Export) và Matplotlib (Visualization).
+
+3. CÁC TÍNH NĂNG NỔI BẬT & TỐI ƯU HÓA
+-------------------------------------
+3.1. Theo dõi thông minh (ByteTrack Integration):
+   - Thay thế DeepSort bằng ByteTrack để tối ưu hóa bộ nhớ (RAM).
+   - ByteTrack sử dụng toán học thuần túy (IoU & Kalman Filter), loại bỏ gánh nặng của mô hình AI Re-ID, giúp chạy ổn định trên các môi trường hạn chế tài nguyên như GitHub Codespace.
+
+3.2. Phân tích mật độ chuẩn (PCE - Passenger Car Equivalent):
+   - Thay vì tính diện tích pixel đơn thuần, hệ thống áp dụng hệ số quy đổi:
+     * Xe máy: 0.5 PCE
+     * Ô tô con: 1.0 PCE
+     * Xe tải/Bus: 2.5 - 3.0 PCE
+   - Giúp phản ánh chính xác mức độ chiếm dụng lòng đường thực tế.
+
+3.3. Vùng quan tâm (Polygon ROI):
+   - Định nghĩa vùng lòng đường bằng đa giác màu xanh.
+   - Chỉ tính mật độ và lưu lượng cho phương tiện nằm trong vùng này, loại bỏ nhiễu từ xe đỗ lề đường hoặc vỉa hè.
+
+3.4. Tối ưu hiệu suất xử lý:
+   - Frame Skipping (Stride): Chỉ phân tích 1 trong mỗi 5-10 khung hình để tăng tốc độ lên gấp nhiều lần.
+   - Memory Management: Sử dụng Garbage Collection (gc) để dọn dẹp RAM liên tục, ngăn ngừa lỗi "Terminated".
+
+4. KẾT QUẢ ĐẦU RA
+-----------------
+- Video phân tích: 'output_pro.avi' (Bao gồm khung nhận diện, ID xe và thông số mật độ).
+- Báo cáo dữ liệu: 'traffic_report.csv' (Thống kê số xe và mật độ theo từng giây).
+- Biểu đồ mật độ: 'traffic_density_chart.png' (Trực quan hóa sự biến thiên giao thông).
+
+5. CÁC MÔ HÌNH ĐỀ XUẤT KẾT HỢP (HYBRID MODELS)
+--------------------------------------------
+Để nâng cao độ thông minh và tính đa dụng của hệ thống, chúng tôi đề xuất kết hợp YOLO/CNN với các mô hình bổ trợ sau:
+
+5.1. Nhận diện Biển số xe (YOLO + LPRNet):
+   - Quy trình: YOLO tìm vị trí xe -> Crop ảnh vùng biển số -> Đưa vào mô hình LPRNet (Lightweight Plate Recognition) hoặc CRNN để đọc ký tự biển số.
+   - Ứng dụng: Phạt nguội, quản lý bãi đỗ xe thông minh.
+
+5.2. Đo vận tốc & Dự báo quỹ đạo (YOLO + Optical Flow + Social-LSTM):
+   - Kết hợp Optical Flow để tính toán vector dịch chuyển của điểm ảnh theo thời gian, từ đó quy đổi ra vận tốc thực tế (km/h).
+   - Sử dụng Social-LSTM để dự báo hướng di chuyển tiếp theo của xe trong 3-5 giây tới, giúp phát hiện nguy cơ tai nạn sớm.
+
+5.3. Nhận diện chi tiết phương tiện (YOLO + ResNet/EfficientNet):
+   - Sử dụng các mạng phân loại (CNN Classifiers) mạnh như ResNet để nhận diện sâu hơn về: Màu sắc, Thương hiệu (Honda, Toyota...), Đời xe (Year), hoặc nhận diện xe ưu tiên (Cứu thương, Cứu hỏa).
+
+5.4. Phân tích hành vi vi phạm (YOLO + SlowFast/Video Swin Transformer):
+   - Phân tích các hành động liên tục trong video để phát hiện xe đi ngược chiều, xe lạng lách, dừng đỗ sai quy định hoặc xe không đội mũ bảo hiểm.
+
+6. HƯỚNG DẪN VẬN HÀNH
+---------------------
+Kích hoạt môi trường ảo và chạy script:
+$ ./env/bin/python3 main.py --input video_mau.mp4
+
+Hệ thống sẽ tự động thực hiện quy trình: Nhận diện -> Tracking -> Phân tích mật độ -> Xuất báo cáo.
+
+==========================================================================
+Người thực hiện: Gemini CLI Agent
+Ngày báo cáo: 05/04/2026

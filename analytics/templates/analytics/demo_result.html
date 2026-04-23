@@ -1,0 +1,144 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}Phân tích AI hoàn tất{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-container { animation: fadeInUp 0.8s ease-out; }
+    .video-frame { 
+        border-radius: 30px; overflow: hidden; background: #000; 
+        box-shadow: 0 30px 60px rgba(0,0,0,0.3); border: 1px solid #333;
+    }
+    .model-info-card { 
+        border-radius: 24px; border: none; 
+        background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+        box-shadow: var(--card-shadow);
+    }
+    .metric-value { font-size: 3.5rem; font-weight: 800; color: var(--primary-blue); }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <div class="d-flex justify-content-between align-items-end mb-5">
+        <div>
+            <span class="badge bg-primary mb-2 px-3 py-2 rounded-pill uppercase tracking-widest" style="font-size: 10px;">AI Core v1.0 - Success</span>
+            <h1 class="fw-bold text-dark display-5">Kết quả phân tích {{ result.mode|upper }}</h1>
+            <p class="text-muted">Video đã được xử lý bằng thuật toán nhận diện và theo dõi thời gian thực.</p>
+        </div>
+        <a href="{% url 'index' %}" class="btn btn-outline-primary-ai mb-2">PHÂN TÍCH LẠI</a>
+    </div>
+
+    <div class="row g-5">
+        <!-- VIDEO OUTPUT ĐÃ XỬ LÝ -->
+        <div class="col-lg-8">
+            <div class="video-frame position-relative">
+                {% if result.processed_video %}
+                    <video class="w-100" controls autoplay muted playsinline>
+                        <source src="{{ result.processed_video.url }}" type="video/webm">
+                        <source src="{{ result.processed_video.url }}" type="video/mp4">
+                        Trình duyệt của bạn không hỗ trợ xem video.
+                    </video>
+                {% else %}
+                    <div class="p-5 text-center text-white italic opacity-50">
+                        <span class="material-icons display-1 d-block mb-3">running_with_errors</span>
+                        Video đang gặp lỗi định dạng hoặc đang được chuyển đổi.
+                    </div>
+                {% endif %}
+                <div class="position-absolute top-0 start-0 m-4">
+                    <span class="badge bg-danger p-2 px-3 shadow-lg">PROCESSED BY AI</span>
+                </div>
+            </div>
+
+            <!-- BIỂU ĐỒ PHÂN TÍCH -->
+            <div class="card mt-5 p-4 p-lg-5 border-0 shadow-sm rounded-5">
+                <h4 class="fw-bold text-dark mb-4 d-flex align-items-center">
+                    <span class="material-icons me-2 text-primary">analytics</span> Biến thiên mật độ theo thời gian
+                </h4>
+                <div style="height: 350px;">
+                    <canvas id="resultChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- THÔNG SỐ & GIỚI THIỆU MÔ HÌNH -->
+        <div class="col-lg-4">
+            <div class="stats-card mb-4 border-0">
+                <p class="text-muted small fw-bold text-uppercase tracking-widest mb-1">Lưu lượng trung bình</p>
+                <div class="metric-value">{{ result.total_vehicles }}</div>
+                <p class="text-muted small">Số xe trung bình xuất hiện mỗi giây</p>
+            </div>
+
+            <div class="stats-card mb-4 border-0 border-start border-4 border-primary">
+                <p class="text-muted small fw-bold text-uppercase tracking-widest mb-1">Mật độ trung bình</p>
+                <div class="metric-value text-primary">{{ result.peak_density }}%</div>
+                <p class="text-muted small">Mức độ chiếm dụng mặt đường bình quân</p>
+            </div>
+
+            <!-- GIỚI THIỆU MÔ HÌNH CHI TIẾT -->
+            <div class="model-info-card p-4 mt-5">
+                <h5 class="fw-bold text-primary mb-3">Tìm hiểu về thuật toán</h5>
+                <div class="accordion accordion-flush" id="modelAccordion">
+                    <div class="accordion-item bg-transparent">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button bg-transparent fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#desc">
+                                Cơ chế hoạt động của {{ result.mode|upper }}
+                            </button>
+                        </h2>
+                        <div id="desc" class="accordion-collapse collapse show" data-bs-parent="#modelAccordion">
+                            <div class="accordion-body small text-muted p-0 py-3">
+                                {% if result.mode == 'fast' %}
+                                    <strong>ByteTrack:</strong> Một trong những bộ theo dõi (Tracker) hàng đầu hiện nay. ByteTrack không chỉ sử dụng các nhận diện có độ tin cậy cao mà còn tận dụng cả các nhận diện yếu (mờ, nhỏ) để duy trì lộ trình xe, giúp giảm thiểu hiện tượng nhảy ID và tối ưu hóa RAM cực tốt.
+                                {% elif result.mode == 'stable' %}
+                                    <strong>YOLOv11 + DeepSort:</strong> Sự kết hợp giữa nhận diện vật thể tốc độ cao và thuật toán truy vết diện mạo. DeepSort tích hợp mô hình trích xuất đặc trưng (Appearance Embeddings) giúp hệ thống "nhớ mặt" chiếc xe ngay cả khi nó bị che khuất bởi vật cản trong thời gian dài.
+                                {% elif result.mode == 'motion' %}
+                                    <strong>OC-SORT:</strong> Chuyên dụng cho các tình huống camera không ổn định hoặc xe di chuyển lắt léo. OC-SORT tập trung vào quán tính chuyển động (Motion Center) để dự báo vị trí xe chính xác hơn các phương pháp truyền thống.
+                                {% else %}
+                                    <strong>Mask R-CNN:</strong> Đỉnh cao của phân tích diện tích. Thay vì dùng khung hình chữ nhật, nó phân đoạn từng pixel của xe, cho phép tính toán diện tích chiếm dụng lòng đường thực tế với độ sai số cực nhỏ.
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    <div class="rounded-circle bg-success" style="width: 8px; height: 8px;"></div>
+                    <span class="x-small text-muted">Kết quả được kiểm chứng bởi AI Engine v2.5</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('resultChart').getContext('2d');
+    const chartData = {{ analytics|safe }};
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.map(d => d.time_sec + 's'),
+            datasets: [{
+                label: 'Mật độ (%)',
+                data: chartData.map(d => d.density_pce),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.05)',
+                fill: true, tension: 0.4, pointRadius: 2, borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+</script>
+{% endblock %}

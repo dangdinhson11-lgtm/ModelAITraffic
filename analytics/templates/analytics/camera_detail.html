@@ -1,0 +1,168 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}{{ camera.title }} - Chi tiết Phân tích{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chart-box { 
+        background: #ffffff; 
+        border-radius: 20px; 
+        padding: 1.5rem; 
+        border: 1px solid #eee;
+        /* FIX: Co dinh chieu cao de tranh bi phinh ra */
+        height: 400px !important;
+        position: relative;
+    }
+    .video-container {
+        border-radius: 20px;
+        overflow: hidden;
+        background: #000;
+        box-shadow: var(--card-shadow);
+    }
+    .text-success-bright { color: #198754; }
+    .text-danger-bright { color: #dc3545; }
+    .text-warning-bright { color: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'camera_list' %}" class="text-decoration-none">Giám sát</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chi tiết Camera</li>
+            </ol>
+        </nav>
+        <h1 class="fw-bold text-dark">{{ camera.title }}</h1>
+    </div>
+    <div class="text-end">
+        <span class="badge bg-primary rounded-pill px-3 py-2">LIVE ANALYTICS</span>
+        <p class="text-muted small mt-2 mb-0">Cập nhật: {{ camera.last_updated|date:"H:i:s" }}</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- VIDEO STREAM -->
+    <div class="col-xl-8">
+        <div class="position-relative overflow-hidden" style="aspect-ratio: 16/9; border-radius: 24px; background: #000;">
+            {% if camera.last_image %}
+                <img id="mainCameraImage" src="{{ camera.last_image.url }}" class="w-100 h-100 object-fit-contain" style="display: block;">
+            {% else %}
+                <div class="w-100 h-100 d-flex align-items-center justify-content-center text-white italic opacity-50">Đang tải tín hiệu AI...</div>
+            {% endif %}
+            <div class="position-absolute bottom-0 start-0 w-100 p-3 bg-gradient-to-t from-black to-transparent text-white-50 small" style="font-size: 10px;">
+                ROBOFLOW ENGINE | YOLOv11 | 0.20 CONF
+            </div>
+        </div>
+
+        <!-- BIỂU ĐỒ - ĐÃ FIX CHIỀU CAO -->
+        <div class="chart-box mt-4 shadow-sm">
+            <h5 class="fw-bold text-dark mb-4">Biến thiên mật độ (20 mốc gần nhất)</h5>
+            <div style="height: 300px; width: 100%; position: relative;">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="col-xl-4">
+        <div class="stats-card mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fw-bold small text-uppercase">Mật độ trung bình</span>
+                <span class="material-icons text-primary">speed</span>
+            </div>
+            <div class="display-3 fw-bold text-primary">{{ avg_density }}%</div>
+            <div class="mt-2">
+                <span class="badge {% if avg_density > 70 %}bg-danger{% elif avg_density > 35 %}bg-warning text-dark{% else %}bg-success{% endif %} rounded-pill">
+                    {% if avg_density > 70 %}Tắc nghẽn{% elif avg_density > 35 %}Trung bình{% else %}Thông thoáng{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="stats-card mb-4 border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted fw-bold small text-uppercase">Lưu lượng trung bình</span>
+                <span class="material-icons text-success">directions_car</span>
+            </div>
+            <div class="display-4 fw-bold text-dark">{{ avg_vehicles }}</div>
+            <p class="text-muted small mt-1">Xe xuất hiện trung bình trong 60 mốc</p>
+        </div>
+
+        <div class="stats-card bg-light border-0">
+            <h6 class="fw-bold text-dark mb-3">Hành động khuyến nghị</h6>
+            <div class="alert alert-info border-0 rounded-4 small mb-0">
+                Hệ thống AI đề xuất duy trì tốc độ dòng chảy hiện tại. Không phát hiện sự cố nghiêm trọng.
+            </div>
+            <button class="btn btn-primary-ai w-100 mt-4 shadow-sm">XUẤT BÁO CÁO PDF</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('trafficChart').getContext('2d');
+    const historyData = [
+        {% for h in history %}
+            { time: "{{ h.timestamp|date:'H:i:s' }}", density: {{ h.density_pce }} },
+        {% endfor %}
+    ];
+
+    let trafficChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historyData.map(d => d.time),
+            datasets: [{
+                data: historyData.map(d => d.density),
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.05)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false, // Quan trong: Luon di kem voi container co chieu cao co dinh
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { borderDash: [5, 5], color: '#f0f0f0' } },
+                x: { grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+
+    // Auto refresh thong minh moi 30s
+    function refreshDetail() {
+        console.log("Đang lấy dữ liệu mới cho camera...");
+        fetch('/api/cameras/{{ camera.id }}/')
+            .then(res => res.json())
+            .then(data => {
+                // 1. Cap nhat anh AI thong qua ID
+                const mainImg = document.getElementById('mainCameraImage');
+                if (mainImg && data.last_image) {
+                    mainImg.src = data.last_image + '?t=' + new Date().getTime();
+                }
+
+                // 2. Cap nhat Stats
+                document.querySelector('.display-3.text-primary').innerText = data.current_density + '%';
+                document.querySelector('.display-4.text-dark').innerText = data.current_vehicle_count;
+                
+                // 3. Cap nhat Bieu do
+                if (data.history && data.history.length > 0) {
+                    const latest = data.history.slice(-60); // Lay 60 diem moi nhat
+                    trafficChart.data.labels = latest.map(h => new Date(h.timestamp).toLocaleTimeString());
+                    trafficChart.data.datasets[0].data = latest.map(h => h.density_pce);
+                    trafficChart.update('none'); // Update mượt mà không hiệu ứng
+                }
+            });
+    }
+
+    setInterval(refreshDetail, 30000);
+</script>
+{% endblock %}

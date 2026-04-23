@@ -1,0 +1,13 @@
+env/
+__pycache__/
+*.pyc
+.env
+*.log
+media/demo_uploads/*
+media/demo_results/*
+media/live_snapshots/*
+!media/demo_uploads/.gitkeep
+!media/demo_results/.gitkeep
+!media/live_snapshots/.gitkeep
+db.sqlite3
+traffic_report.csv

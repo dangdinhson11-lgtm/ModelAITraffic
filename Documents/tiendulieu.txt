@@ -1,0 +1,64 @@
+==========================================================================
+             QUY TRÌNH TIỀN XỬ LÝ DỮ LIỆU (DATA PREPROCESSING REPORT)
+==========================================================================
+Dự án: Model_AITRAFFIC - Phân tích giao thông thông minh
+
+Tiền xử lý dữ liệu là bước then chốt giúp tối ưu hóa hiệu suất mô hình nhận diện
+và đảm bảo tính chính xác cho các chỉ số mật độ, tần suất. Dưới đây là các
+bước chi tiết đã được áp dụng trong hệ thống:
+
+1. TIỀN XỬ LÝ KHÔNG GIAN (SPATIAL PREPROCESSING)
+-----------------------------------------------
+1.1. Thay đổi kích thước (Resizing):
+   - Phương pháp: Đưa độ phân giải gốc của Video (ví dụ 1080p) về chuẩn 640px.
+   - Mục đích: Giảm khối lượng tính toán cho mô hình YOLO và tiết kiệm RAM
+     cho bộ lọc Kalman (Tracking). Giảm kích thước ảnh giúp tốc độ xử lý
+     tăng gấp 3-4 lần mà vẫn giữ đủ chi tiết để nhận diện phương tiện.
+
+1.2. Xác định vùng quan tâm (ROI - Region of Interest):
+   - Phương pháp: Sử dụng Polygon Mask (Đa giác).
+   - Chi tiết: Thiết lập một vùng đa giác bao phủ phần lòng đường chính.
+   - Tác dụng: Loại bỏ các nhiễu từ môi trường xung quanh (vỉa hè, biển báo,
+     xe đỗ cố định). Hệ thống chỉ thực hiện tính toán mật độ và lưu lượng
+     trên các pixel thuộc vùng ROI này.
+
+2. TIỀN XỬ LÝ THỜI GIAN (TEMPORAL PREPROCESSING)
+-----------------------------------------------
+2.1. Nhảy khung hình (Frame Skipping / Stride):
+   - Thông số: Stride = 5 hoặc 10.
+   - Phương pháp: Chỉ thực hiện nhận diện AI trên 1 khung hình trong mỗi nhóm
+     5-10 khung hình liên tiếp.
+   - Mục đích: Giảm số lượng API calls (tiết kiệm chi phí và băng thông),
+     đồng thời giảm hiện tượng giật lag khi xử lý video dài.
+
+2.2. Đồng bộ hóa ID (Tracking State Initialization):
+   - Sử dụng thuật toán Kalman Filter để dự đoán vị trí dựa trên vận tốc,
+     giúp hệ thống giữ được ID của xe ngay cả khi xe bị mờ hoặc mất dấu
+     trong 1 vài khung hình do nhiễu.
+
+3. TIỀN XỬ LÝ HÌNH ẢNH CHO MÔ HÌNH (INFERENCE PREPROCESSING)
+-----------------------------------------------------------
+3.1. Chuyển đổi định dạng (Color Space Conversion):
+   - Chuyển đổi từ BGR (OpenCV) sang RGB (YOLO/Inference SDK) để phù hợp với
+     yêu cầu đầu vào của mô hình học sâu.
+
+3.2. Chuẩn hóa giá trị Pixel (Normalization):
+   - Các giá trị cường độ sáng (0-255) được chuẩn hóa về đoạn [0, 1] trước khi
+     đưa vào mạng nơ-ron để đảm bảo hội tụ nhanh và ổn định.
+
+4. TIỀN XỬ LÝ DỮ LIỆU ĐẦU RA (POST-DETECTION LOGIC)
+--------------------------------------------------
+4.1. Lọc ngưỡng tin cậy (Confidence Thresholding):
+   - Loại bỏ các nhận diện có độ tự tin thấp (< 0.4) để tránh các trường hợp
+     "nhận diện nhầm" vật thể không phải phương tiện.
+
+4.2. Quy đổi đơn vị diện tích (PCE Calibration):
+   - Áp dụng hệ số Passenger Car Equivalent để quy đổi diện tích chiếm dụng
+     của xe máy, ô tô, xe tải về một đơn vị chung (xe con quy đổi).
+
+KẾT LUẬN:
+Nhờ quy trình tiền xử lý phân tầng (Không gian -> Thời gian -> Hình ảnh),
+hệ thống có thể chạy mượt mà trên môi trường hạn chế (GitHub Codespace)
+mà vẫn đạt được độ chính xác cao trong việc đo lường mật độ và tần suất.
+==========================================================================
+Ghi chú: Nội dung này được trích xuất từ logic thực thi của main.py.
